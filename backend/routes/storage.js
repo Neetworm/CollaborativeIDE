@@ -1,8 +1,6 @@
 import express from "express";
 import multer from "multer";
 import archiver from "archiver";
-import path from "path";
-import { fileURLToPath } from "url";
 import { verifyToken } from "../middleware/auth.js";
 import {
   uploadToStorage,
@@ -15,15 +13,12 @@ import {
 import Upload from "../models/Upload.js";
 import Project from "../models/Project.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const router = express.Router();
 
 // Multer config — memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = [
       "image/jpeg", "image/png", "image/gif", "image/svg+xml",
@@ -40,37 +35,46 @@ const upload = multer({
   },
 });
 
-const router = express.Router();
-
-// TEMPORARY TEST ROUTE
-router.get("/test", (req, res) => {
-  res.json({ message: "Storage router is working", time: Date.now() });
-});
-
 // ==================== UPLOAD FILE ====================
-router.post("/:roomId/snapshot/restore", verifyToken, async (req, res) => {
+router.post("/:roomId/upload", verifyToken, upload.single("file"), async (req, res) => {
+  console.log("📤 Upload route hit for room:", req.params.roomId);
   try {
-    const { key } = req.body;
-    if (!key) return res.status(400).json({ error: "Snapshot key required" });
-
-    const project = await Project.findOne({ roomId: req.params.roomId });
-    if (!project) return res.status(404).json({ error: "Project not found" });
-
-    if (project.creator !== req.user.username) {
-      return res.status(403).json({ error: "Only the leader can restore snapshots" });
+    if (!req.file) {
+      console.log("❌ No file in request");
+      return res.status(400).json({ error: "No file provided" });
     }
+    console.log("📁 File received:", req.file.originalname, req.file.size, "bytes");
 
-    const snapshot = await getSnapshotContent(key);
+    const { roomId } = req.params;
+    const storageKey = `rooms/${roomId}/uploads/${Date.now()}_${req.file.originalname}`;
 
-    await Project.updateOne(
-      { roomId: req.params.roomId },
-      { files: snapshot.files, updatedAt: Date.now() }
-    );
+    await uploadToStorage(storageKey, req.file.buffer, req.file.mimetype);
 
-    res.json({ message: "Snapshot restored successfully", files: snapshot.files });
+    const uploadRecord = await Upload.create({
+      roomId,
+      uploadedBy: req.user.username,
+      originalName: req.file.originalname,
+      s3Key: storageKey,
+      size: req.file.size,
+      mimeType: req.file.mimetype,
+    });
+
+    console.log("✅ Upload saved to DB:", uploadRecord._id);
+
+    res.status(201).json({
+      message: "File uploaded successfully",
+      file: {
+        id: uploadRecord._id,
+        name: uploadRecord.originalName,
+        size: uploadRecord.size,
+        mimeType: uploadRecord.mimeType,
+        uploadedBy: uploadRecord.uploadedBy,
+        createdAt: uploadRecord.createdAt,
+      },
+    });
   } catch (err) {
-    console.error("Restore error:", err);
-    res.status(500).json({ error: "Restore failed" });
+    console.error("Upload error:", err);
+    res.status(500).json({ error: err.message || "Upload failed" });
   }
 });
 
