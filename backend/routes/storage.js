@@ -40,6 +40,13 @@ const upload = multer({
   },
 });
 
+const router = express.Router();
+
+// TEMPORARY TEST ROUTE
+router.get("/test", (req, res) => {
+  res.json({ message: "Storage router is working", time: Date.now() });
+});
+
 // ==================== UPLOAD FILE ====================
 router.post("/:roomId/snapshot/restore", verifyToken, async (req, res) => {
   try {
