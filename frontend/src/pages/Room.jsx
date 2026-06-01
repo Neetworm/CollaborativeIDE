@@ -1,5 +1,5 @@
 import { API_URL } from "../config.js";
-import AiAssistant from "../components/AiAssistant";
+// import AiAssistant from "../components/AiAssistant";
 import CloudStorage from "../components/CloudStorage";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -551,7 +551,7 @@ function Room() {
           </div>
         </div>
       </div>
-      {<AiAssistant getCodeContext={() => editorRef.current ? editorRef.current.getValue() : ""} /> }
+      {/* {<AiAssistant getCodeContext={() => editorRef.current ? editorRef.current.getValue() : ""} /> } */}
     </div>
   );
 }

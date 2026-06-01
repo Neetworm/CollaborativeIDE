@@ -13,6 +13,14 @@ function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+
   useEffect(() => {
     const err = searchParams.get("error");
     if (err === "github_auth_failed") setOauthError("GitHub login failed. Please try again.");
@@ -62,7 +70,35 @@ function Auth() {
       setLoading(false);
     }
   };
+    const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotMessage("");
+    setForgotLoading(true);
 
+    try {
+      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: forgotUsername,
+          email: forgotEmail,
+          newPassword: forgotNewPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setForgotMessage(data.message);
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setIsLogin(true);
+      }, 2000);
+    } catch (err) {
+      setForgotError(err.message);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
   return (
     <div style={s.page}>
       <div style={s.card}>
@@ -123,11 +159,10 @@ function Auth() {
           {!isLogin && (
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email (optional)"
               value={email}
               onChange={e => setEmail(e.target.value)}
               style={s.input}
-              required
             />
           )}
           <input
@@ -158,6 +193,111 @@ function Auth() {
             {isLogin ? "Register" : "Login"}
           </span>
         </p>
+
+        {isLogin && (
+          <p style={{ ...s.switchText, marginTop: "8px" }}>
+            <span
+              onClick={() => { setShowForgotPassword(true); setError(""); }}
+              style={{ ...s.switchLink, color: "#94a3b8", fontSize: "12px" }}
+            >
+              Forgot Password?
+            </span>
+          </p>
+        )}
+
+        {showForgotPassword && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex", justifyContent: "center", alignItems: "center",
+            zIndex: 9999
+          }}>
+            <div style={{
+              background: "#1e293b", padding: "30px",
+              borderRadius: "12px", width: "340px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)"
+            }}>
+              <h3 style={{ color: "white", margin: "0 0 20px", textAlign: "center" }}>
+                Reset Password
+              </h3>
+
+              {forgotMessage && (
+                <div style={{
+                  background: "#14532d", color: "#22c55e",
+                  padding: "10px", borderRadius: "8px",
+                  fontSize: "13px", marginBottom: "15px",
+                  textAlign: "center"
+                }}>
+                  ✅ {forgotMessage}
+                </div>
+              )}
+
+              {forgotError && (
+                <div style={{
+                  background: "#7f1d1d", color: "#fca5a5",
+                  padding: "10px", borderRadius: "8px",
+                  fontSize: "13px", marginBottom: "15px",
+                  textAlign: "center"
+                }}>
+                  {forgotError}
+                </div>
+              )}
+
+              <form onSubmit={handleForgotPassword} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <input
+                  type="text"
+                  placeholder="Your Username"
+                  value={forgotUsername}
+                  onChange={e => setForgotUsername(e.target.value)}
+                  style={s.input}
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Your Email Address"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  style={s.input}
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="New Password (min 6 chars)"
+                  value={forgotNewPassword}
+                  onChange={e => setForgotNewPassword(e.target.value)}
+                  style={s.input}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  style={{
+                    ...s.btn,
+                    opacity: forgotLoading ? 0.7 : 1,
+                    background: "#6366f1"
+                  }}
+                >
+                  {forgotLoading ? "Resetting..." : "Reset Password"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotError("");
+                    setForgotMessage("");
+                  }}
+                  style={{
+                    ...s.btn,
+                    background: "#334155"
+                  }}
+                >
+                  Cancel
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Divider */}
         <div style={{

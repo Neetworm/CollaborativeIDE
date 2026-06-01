@@ -12,14 +12,21 @@ const router = express.Router();
 router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password are required" });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    // Generate placeholder email if not provided
+    const userEmail = email?.trim() || `${username}_${Date.now()}@codecollab.local`;
+
+    const existingUser = await User.findOne(
+      email?.trim()
+        ? { $or: [{ username }, { email: userEmail }] }
+        : { username }
+    );  
     if (existingUser) {
       return res.status(400).json({
         error: existingUser.username === username
@@ -29,7 +36,7 @@ router.post("/register", async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, email, password: hashed });
+    const user = await User.create({ username, email: userEmail, password: hashed });
     const token = generateToken(user);
     res.status(201).json({ 
       token, 
@@ -276,5 +283,38 @@ router.get("/github/link", verifyToken, (req, res) => {
   const githubAuthUrl = `https://github.com/login/oauth/authorize?${params}`;
   res.json({ url: githubAuthUrl });
 });
+// ==================== FORGOT PASSWORD ====================
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { username, email, newPassword } = req.body;
 
+    if (!username || !email || !newPassword) {
+      return res.status(400).json({ 
+        error: "Username, email and new password are required" 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        error: "Password must be at least 6 characters" 
+      });
+    }
+
+    // Find user by both username AND email (double verification)
+    const user = await User.findOne({ username, email });
+    if (!user) {
+      return res.status(404).json({ 
+        error: "No account found with that username and email combination" 
+      });
+    }
+
+    // Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.updateOne({ _id: user._id }, { password: hashed });
+
+    res.json({ message: "Password reset successful. You can now login." });
+  } catch (err) {
+    res.status(500).json({ error: "Server error: " + err.message });
+  }
+});
 export default router;

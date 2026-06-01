@@ -11,7 +11,7 @@ import {
   uploadSnapshot,
   getSnapshots,
   getSnapshotContent,
-} from "../services/storageLocal.js";
+} from "../services/storageDB.js";
 import Upload from "../models/Upload.js";
 import Project from "../models/Project.js";
 
