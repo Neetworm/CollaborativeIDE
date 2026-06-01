@@ -14,8 +14,8 @@ import User from "./models/User.js";
 import Project from "./models/Project.js";
 import { verifyToken, verifySocketToken, generateToken } from "./middleware/auth.js";
 // (unsafe execution).
-//import { executeCode } from "./executeCode.js";
-import { executeCode } from "./executeCodeDocker.js";
+import { executeCode } from "./executeCode.js";
+// import { executeCode } from "./executeCodeDocker.js";
 
 const app = express();
 app.use(cors({
