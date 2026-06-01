@@ -55,25 +55,10 @@ router.post("/:roomId/snapshot/restore", verifyToken, async (req, res) => {
 
     const snapshot = await getSnapshotContent(key);
 
-    // Update database
     await Project.updateOne(
       { roomId: req.params.roomId },
       { files: snapshot.files, updatedAt: Date.now() }
     );
-
-    // Notify all clients in the room to reload file tree
-    if (req.io) {
-      req.io.to(req.params.roomId).emit("file-tree-sync", {
-        files: snapshot.files,
-        activeFileId: snapshot.files[0]?.id || "file-1",
-      });
-
-      // Also update the active file content
-      const firstFile = snapshot.files[0];
-      if (firstFile) {
-        req.io.to(req.params.roomId).emit("code-update", firstFile.content || "");
-      }
-    }
 
     res.json({ message: "Snapshot restored successfully", files: snapshot.files });
   } catch (err) {

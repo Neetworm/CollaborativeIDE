@@ -25,10 +25,7 @@ app.use(cors({
 }));                          
 app.use(express.json());                  // ← json parser SECOND
 app.use("/api/auth", authRoutes);         // ← routes AFTER middlewares
-app.use("/api/storage", (req, res, next) => {
-  req.io = io;
-  next();
-}, storageRoutes);   
+app.use("/api/storage", storageRoutes); 
 app.use("/api/ai", aiRoutes);
 
 // Connect MongoDB
