@@ -486,7 +486,6 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("code-update", getActiveFileContent(roomId));
   });
 
-  // ============ FOLLOW ME ============
     // ============ FOLLOW ME ============
   socket.on("follow-me-toggle", ({ roomId }) => {
     if (!roomFollowMe[roomId]) roomFollowMe[roomId] = { active:false, leaderId:null, leaderName:null };
