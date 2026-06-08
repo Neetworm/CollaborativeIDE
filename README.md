@@ -1,248 +1,146 @@
-````md
-# CollaborativeIDE
+```markdown
+<div align="center">
+  
+  <!-- Dynamic Banner -->
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4af626,100:1e1e1e&height=250&section=header&text=CodeCollab&fontSize=80&fontColor=ffffff" alt="CodeCollab Header" />
 
-CollaborativeIDE is a real-time collaborative code editor and development workspace built with a Node.js backend and a React frontend. It supports authentication, GitHub OAuth, project rooms, file storage, AI chat, sandboxed code execution, and admin analytics.
+  <h1>🚀 CodeCollab IDE</h1>
+  
+  <p><b>A production-grade, real-time collaborative cloud IDE that allows concurrent developers to write, compile, and synchronize code seamlessly in a unified workspace.</b></p>
 
-## Features
+  <!-- Badges -->
+  <a href="https://github.com/Neetworm/CollaborativeIDE/stargazers"><img src="https://img.shields.io/github/stars/Neetworm/CollaborativeIDE?style=for-the-badge&color=yellow" alt="Stars" /></a>
+  <a href="https://github.com/Neetworm/CollaborativeIDE/network/members"><img src="https://img.shields.io/github/forks/Neetworm/CollaborativeIDE?style=for-the-badge&color=blue" alt="Forks" /></a>
+  <a href="https://github.com/Neetworm/CollaborativeIDE/issues"><img src="https://img.shields.io/github/issues/Neetworm/CollaborativeIDE?style=for-the-badge&color=red" alt="Issues" /></a>
+  <a href="https://github.com/Neetworm/CollaborativeIDE/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Neetworm/CollaborativeIDE?style=for-the-badge&color=green" alt="License" /></a>
 
-- Real-time collaborative coding rooms
-- JWT-based authentication and authorization
-- GitHub OAuth login and account merge flow
-- AI assistant for coding-related interactions
-- File upload, download, and snapshot support
-- In-memory room state management
-- Secure code execution with Docker sandboxing
-- Support for multiple languages, including Node.js, Python, C++, and Java
-- Admin dashboard for usage and activity insights
-- Clean component-based frontend architecture
+  <br />
+  <br />
 
-## Tech Stack
+  [Live Deployment](https://collaborative-ide-six.vercel.app) • [Report Bug](https://github.com/Neetworm/CollaborativeIDE/issues) • [Request Feature](https://github.com/Neetworm/CollaborativeIDE/issues)
 
-### Frontend
-- React
-- JavaScript
-- Vite
-- Axios
-- React Router
+</div>
 
-### Backend
-- Node.js
-- Express.js
-- MongoDB
-- JWT
-- Socket-style real-time room handling
-- Docker
-- GitHub OAuth
+---
 
-### Storage and Services
-- MongoDB Atlas
-- In-memory OTP storage
-- File metadata storage
-- Docker-based execution environments
+## 🔮 Core Features
 
-## Project Structure
+*   🔴 **Real-Time Synchronization:** Sub-150ms bidirectional state tracking with live peer-cursor broadcast via Socket.IO.
+*   🐳 **Isolated Code Execution:** Remote script compilation safely executed within strict multi-runtime Docker containers (Node, Python, C++).
+*   💾 **Write-Reduction Architecture:** Memory-caching with a dirty-flag pattern minimizing disk I/O, auto-saving to MongoDB every 10 seconds.
+*   👁️ **Follow-Me Mode:** Leader-follower sync layer that forces active room observers to lock onto a project administrator's viewport.
+*   📁 **Full File Management:** Create, delete, and organize files and folders with options to export the entire workspace as a ZIP.
+*   🔒 **Data Isolation Guardrails:** Role-based access controls utilizing query-level aggregation pipeline filters for strict workspace privacy.
 
+---
+
+## 💻 Tech Stack Matrix
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend UI** | ⚛️ React.js, ⚡ Vite, 📝 Monaco Editor, 🛤️ React Router |
+| **Backend & Auth** | 🟢 Node.js, 🚂 Express.js, 🔑 JWT, 🐙 GitHub OAuth 2.0 |
+| **Security & Runtimes**| 🐳 Docker, 📁 Multer, 📦 Archiver API |
+| **Database** | 🍃 MongoDB Atlas, 🗃️ Mongoose ODM |
+| **Infrastructure** | ▲ Vercel (Frontend), ☁️ Render (Backend API) |
+
+---
+
+## ⚙️ Quick Start Installation
+
+**1. Clone the repository**
 ```bash
-CollaborativeIDE/
-├── backend/
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── models/
-│   │   ├── AiChats.js
-│   │   ├── Project.js
-│   │   ├── Upload.js
-│   │   └── User.js
-│   ├── routes/
-│   │   ├── ai.js
-│   │   ├── auth.js
-│   │   └── storage.js
-│   ├── services/
-│   │   ├── storageDB.js
-│   │   └── otpStore.js
-│   ├── docker.node
-│   ├── docker.python
-│   ├── docker.cpp
-│   ├── docker.java
-│   ├── executeCode.js
-│   ├── executeCodeDocker.js
-│   ├── db.js
-│   ├── roomManager.js
-│   └── index.js
-│
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── AiAssistant.jsx
-│       │   ├── CloudStorage.jsx
-│       │   ├── Console.jsx
-│       │   ├── FileTree.jsx
-│       │   └── Navbar.jsx
-│       ├── pages/
-│       │   ├── AdminDashboard.jsx
-│       │   ├── Auth.jsx
-│       │   ├── GitHubMerge.jsx
-│       │   ├── GitHubSuccess.jsx
-│       │   ├── Home.jsx
-│       │   └── Room.jsx
-│       ├── config.js
-│       ├── App.jsx
-│       └── main.jsx
-│
-└── README.md
-````
-
-## Prerequisites
-
-* Node.js
-* npm
-* MongoDB
-* Docker
-* GitHub OAuth application credentials
-
-## Environment Variables
-
-Create a `.env` file inside the backend folder and add the required values:
-
-```env
-PORT=5000
-NODE_ENV=development
-
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-
-BACKEND_URL=http://localhost:5000
-FRONTEND_URL=http://localhost:5173
-
-GEMINI_API_KEY=your_gemini_api_key
-RESEND_API_KEY=your_resend_api_key
-FROM_EMAIL=onboarding@resend.dev
-```
-
-## Installation
-
-### Clone the repository
-
-```bash
-git clone https://github.com/your-username/CollaborativeIDE.git
+git clone [https://github.com/Neetworm/CollaborativeIDE.git](https://github.com/Neetworm/CollaborativeIDE.git)
 cd CollaborativeIDE
+
 ```
 
-### Install backend dependencies
+**2. Setup the Backend API**
 
 ```bash
 cd backend
 npm install
+
 ```
 
-### Install frontend dependencies
+*Create a `.env` file in the backend directory:*
+
+```env
+MONGO_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_jwt_crypto_secret
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+BACKEND_URL=http://localhost:5000
+FRONTEND_URL=http://localhost:5173
+
+```
+
+*Start the server:*
+
+```bash
+node index.js
+
+```
+
+**3. Setup the Frontend Client**
 
 ```bash
 cd ../frontend
 npm install
-```
-
-## Running Locally
-
-### Start the backend
-
-```bash
-cd backend
-node index.js
-```
-
-### Start the frontend
-
-```bash
-cd frontend
 npm run dev
-```
-
-## Docker Execution Setup
-
-CollaborativeIDE uses isolated Docker containers for running code safely in different languages.
-
-The following sandbox images are supported:
-
-* Node.js
-* Python
-* C++
-* Java
-
-Each runtime has its own Dockerfile-style configuration inside the backend folder.
-
-## API Modules
-
-### Auth
-
-Handles:
-
-* user registration
-* login
-* JWT verification
-* GitHub OAuth
-* account merge flow
-
-### AI
-
-Handles:
-
-* AI chat sessions
-* assistant interactions
-
-### Storage
-
-Handles:
-
-* file uploads
-* downloads
-* snapshots
-* storage metadata
-
-## Frontend Pages
-
-### Auth
-
-Login and registration page with authentication flows.
-
-### Home
-
-Dashboard for creating and joining rooms.
-
-### Room
-
-Main collaborative editor workspace.
-
-### AdminDashboard
-
-Analytics and administrative overview.
-
-### GitHubMerge
-
-Flow for merging GitHub-linked accounts.
-
-### GitHubSuccess
-
-OAuth callback success screen.
-
-## Security and Architecture
-
-* JWT is used for protected routes
-* Auth middleware verifies user identity
-* Room state is managed separately from persistent storage
-* Docker is used for isolated code execution
-* File metadata and project data are stored in MongoDB
-* Sensitive operations are separated into dedicated backend routes and services
-
-## License
-
-This project is licensed under the MIT License.
-
-## Author
-
-Neetworm
 
 ```
+
+*The app will be running at `http://localhost:5173*`
+
+---
+
+## 🏗️ System Architecture
+
+```text
+┌─────────────────────────────────────────────┐
+│           Browser (React + Monaco)          │
+│   HTTP REST API  ←→  WebSocket (Socket.IO)  │
+└──────────────────┬──────────────────────────┘
+┌──────────────────▼──────────────────────────┐
+│         Express.js Backend (Node.js)        │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │  REST API   │    │  Socket.IO Server   │ │
+│  └──────┬──────┘    └──────────┬──────────┘ │
+└─────────┼────────────────────┬─┼────────────┘
+┌─────────▼────────────────────▼─┼────────────┐
+│   MongoDB Atlas (Users, Projects, Files)    │
+└─────────────────────────────────┼────────────┘
+                    ┌─────────────▼────────────┐
+                    │   Docker Sandbox Layer   │
+                    └──────────────────────────┘
+
+```
+
+---
+
+## 🤝 Contribute
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 👨‍💻 About the Developer
+
+### Garvit Ghai
+
+**Backend & Systems Engineer**
+
+---
+
+## 🧾 License
+
+Distributed under the **MIT License**. Feel free to use this project for learning or inspiration!
+
 ```
