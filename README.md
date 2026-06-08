@@ -1,4 +1,3 @@
-```markdown
 <div align="center">
   
   <!-- Dynamic Banner -->
@@ -21,16 +20,14 @@
 
 </div>
 
----
-
 ## 🔮 Core Features
 
-*   🔴 **Real-Time Synchronization:** Sub-150ms bidirectional state tracking with live peer-cursor broadcast via Socket.IO.
-*   🐳 **Isolated Code Execution:** Remote script compilation safely executed within strict multi-runtime Docker containers (Node, Python, C++).
-*   💾 **Write-Reduction Architecture:** Memory-caching with a dirty-flag pattern minimizing disk I/O, auto-saving to MongoDB every 10 seconds.
-*   👁️ **Follow-Me Mode:** Leader-follower sync layer that forces active room observers to lock onto a project administrator's viewport.
-*   📁 **Full File Management:** Create, delete, and organize files and folders with options to export the entire workspace as a ZIP.
-*   🔒 **Data Isolation Guardrails:** Role-based access controls utilizing query-level aggregation pipeline filters for strict workspace privacy.
+* 🔴 **Real-Time Synchronization:** Sub-150ms bidirectional state tracking with live peer-cursor broadcast via Socket.IO.
+* 🐳 **Isolated Code Execution:** Remote script compilation safely executed within strict multi-runtime Docker containers (Node, Python, C++).
+* 💾 **Write-Reduction Architecture:** Memory-caching with a dirty-flag pattern minimizing disk I/O, auto-saving to MongoDB every 10 seconds.
+* 👁️ **Follow-Me Mode:** Leader-follower sync layer that forces active room observers to lock onto a project administrator's viewport.
+* 📁 **Full File Management:** Create, delete, and organize files and folders with options to export the entire workspace as a ZIP.
+* 🔒 **Data Isolation Guardrails:** Role-based access controls utilizing query-level aggregation pipeline filters for strict workspace privacy.
 
 ---
 
@@ -133,14 +130,21 @@ Contributions are what make the open-source community such an amazing place to l
 
 ## 👨‍💻 About the Developer
 
-### Garvit Ghai
-
-**Backend & Systems Engineer**
-
----
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://github.com/Neetworm.png" width="200" alt="Garvit Ghai"/><br>
+      <b>Garvit Ghai</b><br><br>
+      <a href="https://github.com/Neetworm">
+        <img src="https://img.shields.io/badge/GITHUB-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+      </a><br>
+      <a href="https://www.linkedin.com/in/garvit-ghai-80638828a/">
+        <img src="https://img.shields.io/badge/LINKEDIN-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## 🧾 License
 
 Distributed under the **MIT License**. Feel free to use this project for learning or inspiration!
-
-```
