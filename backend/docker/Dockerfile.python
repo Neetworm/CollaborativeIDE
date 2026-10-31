@@ -1,0 +1,10 @@
+FROM python:3.12-alpine
+
+RUN addgroup -S sandbox && adduser -S sandbox -G sandbox
+
+ENV PATH="/usr/local/bin:${PATH}"
+
+USER sandbox
+WORKDIR /tmp
+
+CMD ["python3", "main.py"]

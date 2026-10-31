@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+# Install extra tools for debugging (optional)
+RUN apk add --no-cache bash
+
+# Create sandbox user and group FIRST
+RUN addgroup -S sandbox && \
+    adduser -S sandbox -G sandbox
+
+# Create /sandbox folder and set PROPER ownership
+RUN mkdir -p /sandbox && \
+    chown -R sandbox:sandbox /sandbox && \
+    chmod 755 /sandbox
+
+# Switch to sandbox user
+USER sandbox
+WORKDIR /sandbox
+
+CMD ["node", "main.js"]
