@@ -1,3 +1,4 @@
+import Landing from "./pages/Landing";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Auth from "./pages/Auth";
@@ -21,8 +22,13 @@ function App() {
         }} 
       />
       <Routes>
+        {/* The New Public Frontpage */}
+        <Route path="/" element={<Landing />} />
+        
+        {/* The Authenticated Dashboard */}
+        <Route path="/dashboard" element={<Home />} />
+        
         <Route path="/auth" element={<Auth />} />
-        <Route path="/" element={<Home />} />
         <Route path="/room" element={<Room />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/guide" element={<Guide />} />

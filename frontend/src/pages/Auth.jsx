@@ -36,7 +36,6 @@ function Auth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     const url = isLogin ? `${API_BASE_URL}/api/auth/login` : `${API_BASE_URL}/api/auth/register`;
 
     try {
@@ -57,7 +56,7 @@ function Auth() {
         setRecoveryKeyDisplay(data.recoveryKey);
       } else {
         toast.success(`Welcome back, ${data.user.username}!`);
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err) {
       toast.error(err.message);
@@ -69,7 +68,6 @@ function Auth() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: "POST",
@@ -100,16 +98,37 @@ function Auth() {
 
   return (
     <div style={s.page}>
-      {/* Decorative background blur elements */}
+      <style>{`
+        @keyframes floatSlow { 0% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-20px) rotate(5deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+        @keyframes floatFast { 0% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-15px) rotate(-5deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes gridPan { from { background-position: 0 0; } to { background-position: 40px 40px; } }
+        
+        .auth-card-anim { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .bg-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-size: 40px 40px; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); animation: gridPan 3s linear infinite; z-index: 0; pointer-events: none; }
+        .back-btn:hover { color: #f8fafc !important; transform: translateX(-3px); }
+      `}</style>
+
+      {/* Website Navigation Button */}
+      <button onClick={() => navigate("/")} style={s.backBtn} className="back-btn">
+         ← Back to Website
+      </button>
+
+      <div className="bg-grid"></div>
       <div style={s.glowOrb1}></div>
       <div style={s.glowOrb2}></div>
 
-      <div style={s.card}>
+      <div style={{ ...s.floatingSymbol, top: "15%", left: "15%", animation: "floatSlow 6s infinite", color: "#38bdf8" }}>{`{ }`}</div>
+      <div style={{ ...s.floatingSymbol, top: "25%", right: "20%", animation: "floatFast 5s infinite", color: "#a78bfa" }}>{`< />`}</div>
+      <div style={{ ...s.floatingSymbol, bottom: "20%", left: "25%", animation: "floatFast 7s infinite", color: "#22c55e" }}>{`=>`}</div>
+      <div style={{ ...s.floatingSymbol, bottom: "25%", right: "15%", animation: "floatSlow 8s infinite", color: "#facc15" }}>{`();`}</div>
+
+      <div style={s.card} className="auth-card-anim">
         <h1 style={s.logo}>CodeCollab</h1>
         <p style={s.sub}>Real-Time Collaborative Code Editor</p>
 
         {recoveryKeyDisplay ? (
-          <div style={{ textAlign: "center", animation: "fadeIn 0.5s" }}>
+          <div style={{ textAlign: "center", animation: "slideUpFade 0.4s" }}>
             <div style={s.successBadge}>✓ Registration Complete</div>
             <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "20px", lineHeight: "1.5" }}>
               We do not use email. If you forget your password, this key is the <strong>ONLY</strong> way to recover your account.
@@ -117,10 +136,10 @@ function Auth() {
             <div style={s.keyDisplayContainer}>
               <span style={s.keyText}>{recoveryKeyDisplay}</span>
             </div>
-            <button onClick={copyToClipboard} style={{ ...s.btn, background: "#334155", color: "white", marginBottom: "12px", width: "100%" }}>
+            <button onClick={copyToClipboard} style={{ ...s.btn, background: "#334155", color: "white", marginBottom: "12px" }}>
               📋 Copy Key
             </button>
-            <button onClick={() => navigate("/")} style={{ ...s.btn, width: "100%" }}>
+            <button onClick={() => navigate("/dashboard")} style={s.btn}>
               Take me to Dashboard 🚀
             </button>
           </div>
@@ -145,7 +164,7 @@ function Auth() {
             <p style={s.switchText}>Remembered it? <span onClick={() => { setIsResetting(false); }} style={s.switchLink}>Back to Login</span></p>
           </form>
         ) : (
-          <div style={{ animation: "fadeIn 0.3s" }}>
+          <div style={{ animation: "slideUpFade 0.4s" }}>
             <div style={s.tabs}>
               <button onClick={() => setIsLogin(true)} style={{ ...s.tab, borderBottom: isLogin ? "2px solid #38bdf8" : "2px solid transparent", color: isLogin ? "#f8fafc" : "#64748b" }}>Login</button>
               <button onClick={() => setIsLogin(false)} style={{ ...s.tab, borderBottom: !isLogin ? "2px solid #38bdf8" : "2px solid transparent", color: !isLogin ? "#f8fafc" : "#64748b" }}>Register</button>
@@ -191,9 +210,11 @@ function Auth() {
 
 const s = {
   page: { position: "relative", height: "100vh", background: "#020617", display: "flex", justifyContent: "center", alignItems: "center", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" },
+  backBtn: { position: "absolute", top: "30px", left: "40px", background: "transparent", border: "none", color: "#94a3b8", fontSize: "14px", fontWeight: "bold", cursor: "pointer", transition: "all 0.2s", zIndex: 10, display: "flex", alignItems: "center" },
   glowOrb1: { position: "absolute", top: "-10%", left: "-10%", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(56,189,248,0.15) 0%, rgba(0,0,0,0) 70%)", filter: "blur(40px)", zIndex: 0 },
   glowOrb2: { position: "absolute", bottom: "-10%", right: "-10%", width: "400px", height: "400px", background: "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(0,0,0,0) 70%)", filter: "blur(40px)", zIndex: 0 },
-  card: { position: "relative", background: "rgba(30, 41, 59, 0.7)", backdropFilter: "blur(12px)", padding: "45px 40px", borderRadius: "20px", width: "400px", border: "1px solid rgba(255, 255, 255, 0.08)", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)", zIndex: 1, boxSizing: "border-box" },
+  floatingSymbol: { position: "absolute", fontSize: "40px", fontWeight: "bold", opacity: 0.15, zIndex: 0, userSelect: "none", pointerEvents: "none", fontFamily: "monospace" },
+  card: { position: "relative", background: "rgba(30, 41, 59, 0.7)", backdropFilter: "blur(16px)", padding: "45px 40px", borderRadius: "20px", width: "400px", border: "1px solid rgba(255, 255, 255, 0.08)", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)", zIndex: 1, boxSizing: "border-box" },
   logo: { margin: "0 0 5px", textAlign: "center", color: "#f8fafc", fontSize: "28px", fontWeight: "800", letterSpacing: "-0.5px" },
   sub: { margin: "0 0 30px", textAlign: "center", color: "#38bdf8", fontSize: "14px", fontWeight: "500" },
   successBadge: { display: "inline-block", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", padding: "6px 12px", borderRadius: "20px", fontSize: "14px", fontWeight: "bold", marginBottom: "15px" },

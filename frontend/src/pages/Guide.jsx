@@ -8,7 +8,7 @@ function Guide() {
       <div style={s.container}>
         <div style={s.header}>
           <h1 style={s.title}>CodeCollab Documentation</h1>
-          <button onClick={() => navigate("/")} style={s.backBtn}>← Back to Dashboard</button>
+          <button onClick={() => navigate("/dashboard")} style={s.backBtn}>← Back to Dashboard</button>
         </div>
 
         <div style={s.section}>
