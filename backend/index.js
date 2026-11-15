@@ -28,7 +28,12 @@ connectDB();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://collaborative-ide-six.vercel.app",
+      process.env.CLIENT_URL,
+    ].filter(Boolean),
+    
     methods: ["GET", "POST"],
   },
   maxHttpBufferSize: 10 * 1024 * 1024, // 10 MB transport ceiling
