@@ -17,6 +17,7 @@ const s3Client = new S3Client({
   },
 });
 
+
 const BUCKET = process.env.AWS_S3_BUCKET;
 
 // ==================== UPLOAD FILE ====================

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express from "express";
 import bcrypt from "bcryptjs";
 import axios from "axios";
@@ -8,33 +9,79 @@ dotenv.config();
 
 const router = express.Router();
 
-// ==================== EXISTING: REGISTER ====================
+// ==================== REGISTER ====================
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password are required" });
     }
+    
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    const existingUser = await User.findOne({ username });
     if (existingUser) {
-      return res.status(400).json({
-        error: existingUser.username === username
-          ? "Username already taken"
-          : "Email already registered"
-      });
+      return res.status(400).json({ error: "Username already taken" });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, email, password: hashed });
-    const token = generateToken(user);
-    res.status(201).json({ 
-      token, 
-      user: { id: user._id, username: user.username, email: user.email } 
+    // Generate plain-text Recovery Key
+    const rawKey = "CC-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create user with NO email field whatsoever
+    const user = await User.create({ 
+      username, 
+      password: hashedPassword,
+      recoveryKey: rawKey 
     });
+    
+    const token = generateToken(user);
+    
+    res.status(201).json({
+      token,
+      recoveryKey: rawKey,
+      user: {
+        id: user._id,
+        username: user.username,
+        isAdmin: user.isAdmin === true,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error: " + err.message });
+  }
+});
+
+// ==================== NEW: RESET PASSWORD ====================
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { username, recoveryKey, newPassword } = req.body;
+
+    if (!username || !recoveryKey || !newPassword) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findOne({ username });
+    if (!user || !user.recoveryKey) {
+      return res.status(404).json({ error: "Invalid username or recovery key" });
+    }
+
+    // Plain text comparison instead of bcrypt
+    if (recoveryKey !== user.recoveryKey) {
+      return res.status(401).json({ error: "Invalid recovery key" });
+    }
+
+    // Update the password
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: "Password reset successfully. You can now log in." });
   } catch (err) {
     res.status(500).json({ error: "Server error: " + err.message });
   }
@@ -55,8 +102,9 @@ router.post("/login", async (req, res) => {
 
     // Check if user is GitHub-only (no password)
     if (!user.password) {
-      return res.status(401).json({ 
-        error: "This account uses GitHub login. Please use 'Login with GitHub'." 
+      return res.status(401).json({
+        error:
+          "This account uses GitHub login. Please use 'Login with GitHub'.",
       });
     }
 
@@ -66,9 +114,14 @@ router.post("/login", async (req, res) => {
     }
 
     const token = generateToken(user);
-    res.json({ 
-      token, 
-      user: { id: user._id, username: user.username, email: user.email } 
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin === true,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: "Server error: " + err.message });
@@ -80,15 +133,16 @@ router.get("/me", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ 
-      user: { 
-        id: user._id, 
-        username: user.username, 
+    res.json({
+      user: {
+        id: user._id,
+        username: user.username,
         email: user.email,
         githubUsername: user.githubUsername,
         githubAvatar: user.githubAvatar,
-        authProvider: user.authProvider
-      } 
+        authProvider: user.authProvider,
+        isAdmin: user.isAdmin === true,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -101,7 +155,7 @@ router.get("/github", (req, res) => {
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
     redirect_uri: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/auth/github/callback`,
-    scope: "user:email",  // We only need email and profile
+    scope: "user:email", // We only need email and profile
   });
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?${params}`;
@@ -115,7 +169,7 @@ router.get("/github/callback", async (req, res) => {
 
   if (!code) {
     return res.redirect(
-      `${process.env.FRONTEND_URL}/?error=github_auth_failed`
+      `${process.env.FRONTEND_URL}/?error=github_auth_failed`,
     );
   }
 
@@ -128,20 +182,20 @@ router.get("/github/callback", async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
       },
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" } },
     );
 
     const accessToken = tokenResponse.data.access_token;
 
     if (!accessToken) {
       return res.redirect(
-        `${process.env.FRONTEND_URL}/auth?error=github_token_failed`
+        `${process.env.FRONTEND_URL}/auth?error=github_token_failed`,
       );
     }
 
     // Step 2: Get GitHub user profile
     const profileResponse = await axios.get("https://api.github.com/user", {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     const githubProfile = profileResponse.data;
@@ -151,16 +205,16 @@ router.get("/github/callback", async (req, res) => {
     if (!githubEmail) {
       const emailResponse = await axios.get(
         "https://api.github.com/user/emails",
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      const primaryEmail = emailResponse.data.find(e => e.primary && e.verified);
+      const primaryEmail = emailResponse.data.find(
+        (e) => e.primary && e.verified,
+      );
       githubEmail = primaryEmail?.email || null;
     }
 
     if (!githubEmail) {
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/auth?error=no_email`
-      );
+      return res.redirect(`${process.env.FRONTEND_URL}/auth?error=no_email`);
     }
 
     // Step 4: Check if GitHub account already linked
@@ -170,7 +224,7 @@ router.get("/github/callback", async (req, res) => {
       // Already linked — just log them in
       const token = generateToken(user);
       return res.redirect(
-        `${process.env.FRONTEND_URL}/auth/github/success?token=${token}&username=${user.username}&email=${user.email}&id=${user._id}`
+        `${process.env.FRONTEND_URL}/auth/github/success?token=${token}&username=${user.username}&email=${user.email}&id=${user._id}`,
       );
     }
 
@@ -183,11 +237,11 @@ router.get("/github/callback", async (req, res) => {
       // Frontend will show: "Account exists, want to merge?"
       return res.redirect(
         `${process.env.FRONTEND_URL}/auth/github/merge?` +
-        `githubId=${githubProfile.id}` +
-        `&githubUsername=${encodeURIComponent(githubProfile.login)}` +
-        `&githubAvatar=${encodeURIComponent(githubProfile.avatar_url || "")}` +
-        `&email=${encodeURIComponent(githubEmail)}` +
-        `&existingUsername=${encodeURIComponent(existingEmailUser.username)}`
+          `githubId=${githubProfile.id}` +
+          `&githubUsername=${encodeURIComponent(githubProfile.login)}` +
+          `&githubAvatar=${encodeURIComponent(githubProfile.avatar_url || "")}` +
+          `&email=${encodeURIComponent(githubEmail)}` +
+          `&existingUsername=${encodeURIComponent(existingEmailUser.username)}`,
       );
     }
 
@@ -202,7 +256,7 @@ router.get("/github/callback", async (req, res) => {
     user = await User.create({
       username,
       email: githubEmail,
-      password: null,          // No password for GitHub users
+      password: null, // No password for GitHub users
       githubId: String(githubProfile.id),
       githubUsername: githubProfile.login,
       githubAvatar: githubProfile.avatar_url || null,
@@ -211,13 +265,12 @@ router.get("/github/callback", async (req, res) => {
 
     const token = generateToken(user);
     return res.redirect(
-      `${process.env.FRONTEND_URL}/auth/github/success?token=${token}&username=${user.username}&email=${user.email}&id=${user._id}`
+      `${process.env.FRONTEND_URL}/auth/github/success?token=${token}&username=${user.username}&email=${user.email}&id=${user._id}`,
     );
-
   } catch (err) {
     console.error("GitHub OAuth Error:", err.message);
     return res.redirect(
-      `${process.env.FRONTEND_URL}/auth?error=github_server_error`
+      `${process.env.FRONTEND_URL}/auth?error=github_server_error`,
     );
   }
 });
@@ -239,23 +292,23 @@ router.post("/github/merge", verifyToken, async (req, res) => {
         githubId: String(githubId),
         githubUsername,
         githubAvatar,
-        authProvider: "both",  // Now has both local + github
+        authProvider: "both", // Now has both local + github
       },
-      { new: true }
+      { new: true },
     );
 
     const token = generateToken(user);
-    res.json({ 
+    res.json({
       message: "GitHub account linked successfully!",
       token,
-      user: { 
-        id: user._id, 
-        username: user.username, 
+      user: {
+        id: user._id,
+        username: user.username,
         email: user.email,
         githubUsername: user.githubUsername,
         githubAvatar: user.githubAvatar,
-        authProvider: user.authProvider
-      }
+        authProvider: user.authProvider,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: "Merge failed: " + err.message });
@@ -270,7 +323,7 @@ router.get("/github/link", verifyToken, (req, res) => {
     client_id: process.env.GITHUB_CLIENT_ID,
     redirect_uri: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/auth/github/callback`,
     scope: "user:email",
-    state: `link_${req.user.id}`,  // Pass user ID in state
+    state: `link_${req.user.id}`, // Pass user ID in state
   });
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?${params}`;

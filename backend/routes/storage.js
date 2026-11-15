@@ -8,23 +8,30 @@ import {
   deleteFromS3,
   uploadSnapshot,
   getSnapshots,
-  getSnapshotContent,
+  getSnapshotContent
 } from "../services/s3.js";
 import Upload from "../models/Upload.js";
 import Project from "../models/Project.js";
 
 const router = express.Router();
 
-// Multer config — store in memory (then send to S3)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
   fileFilter: (req, file, cb) => {
     const allowed = [
-      "image/jpeg", "image/png", "image/gif", "image/svg+xml",
-      "application/pdf", "text/plain", "text/csv",
-      "application/json", "application/zip",
-      "text/javascript", "text/html", "text/css",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/svg+xml",
+      "application/pdf",
+      "text/plain",
+      "text/csv",
+      "application/json",
+      "application/zip",
+      "text/javascript",
+      "text/html",
+      "text/css",
       "application/octet-stream",
     ];
     if (allowed.includes(file.mimetype)) {
@@ -36,40 +43,45 @@ const upload = multer({
 });
 
 // ==================== UPLOAD FILE ====================
-router.post("/:roomId/upload", verifyToken, upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file provided" });
+router.post(
+  "/:roomId/upload",
+  verifyToken,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file provided" });
 
-    const { roomId } = req.params;
-    const s3Key = `rooms/${roomId}/uploads/${Date.now()}_${req.file.originalname}`;
+      const { roomId } = req.params;
+      const s3Key = `rooms/${roomId}/uploads/${Date.now()}_${req.file.originalname}`;
 
-    await uploadToS3(s3Key, req.file.buffer, req.file.mimetype);
+      await uploadToS3(s3Key, req.file.buffer, req.file.mimetype);
 
-    const uploadRecord = await Upload.create({
-      roomId,
-      uploadedBy: req.user.username,
-      originalName: req.file.originalname,
-      s3Key,
-      size: req.file.size,
-      mimeType: req.file.mimetype,
-    });
+      const uploadRecord = await Upload.create({
+        roomId,
+        uploadedBy: req.user.username,
+        originalName: req.file.originalname,
+        s3Key,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+      });
 
-    res.status(201).json({
-      message: "File uploaded successfully",
-      file: {
-        id: uploadRecord._id,
-        name: uploadRecord.originalName,
-        size: uploadRecord.size,
-        mimeType: uploadRecord.mimeType,
-        uploadedBy: uploadRecord.uploadedBy,
-        createdAt: uploadRecord.createdAt,
-      },
-    });
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({ error: err.message || "Upload failed" });
-  }
-});
+      res.status(201).json({
+        message: "File uploaded successfully",
+        file: {
+          id: uploadRecord._id,
+          name: uploadRecord.originalName,
+          size: uploadRecord.size,
+          mimeType: uploadRecord.mimeType,
+          uploadedBy: uploadRecord.uploadedBy,
+          createdAt: uploadRecord.createdAt,
+        },
+      });
+    } catch (err) {
+      console.error("Upload error:", err);
+      res.status(500).json({ error: err.message || "Upload failed" });
+    }
+  },
+);
 
 // ==================== LIST UPLOADS ====================
 router.get("/:roomId/uploads", verifyToken, async (req, res) => {
@@ -104,7 +116,10 @@ router.delete("/:roomId/upload/:uploadId", verifyToken, async (req, res) => {
 
     // Only uploader or room creator can delete
     const project = await Project.findOne({ roomId: req.params.roomId });
-    if (uploadRecord.uploadedBy !== req.user.username && project?.creator !== req.user.username) {
+    if (
+      uploadRecord.uploadedBy !== req.user.username &&
+      project?.creator !== req.user.username
+    ) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -116,7 +131,6 @@ router.delete("/:roomId/upload/:uploadId", verifyToken, async (req, res) => {
   }
 });
 
-// ==================== EXPORT PROJECT AS ZIP ====================
 // ==================== EXPORT PROJECT AS ZIP ====================
 router.get("/:roomId/export", async (req, res) => {
   try {
@@ -134,7 +148,7 @@ router.get("/:roomId/export", async (req, res) => {
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${(project.title || project.roomId).replace(/[^a-zA-Z0-9]/g, "_")}.zip"`
+      `attachment; filename="${(project.title || project.roomId).replace(/[^a-zA-Z0-9]/g, "_")}.zip"`,
     );
 
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -146,7 +160,7 @@ router.get("/:roomId/export", async (req, res) => {
 
     archive.append(
       `# ${project.title}\n\nRoom ID: ${project.roomId}\nLanguage: ${project.language}\nCreator: ${project.creator}\nExported: ${new Date().toISOString()}\n`,
-      { name: "README.md" }
+      { name: "README.md" },
     );
 
     await archive.finalize();
@@ -164,17 +178,24 @@ router.post("/:roomId/snapshot", verifyToken, async (req, res) => {
     const project = await Project.findOne({ roomId: req.params.roomId });
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    // Only creator can save snapshots
     if (project.creator !== req.user.username) {
       return res.status(403).json({ error: "Only the project leader can save snapshots" });
     }
 
     const snapshots = await getSnapshots(req.params.roomId);
+    
+    // FIX: Limit to 5 Snapshots using your existing 'deleteFromS3' function
+    if (snapshots.length >= 5) {
+      const oldestKey = snapshots[0].key;
+      await deleteFromS3(oldestKey); 
+    }
+    
     const version = snapshots.length + 1;
-
     const key = await uploadSnapshot(req.params.roomId, project.files, version);
+    
     res.status(201).json({ message: `Snapshot v${version} saved`, key, version });
-  } catch (err) {
+  } 
+  catch (err) {
     console.error("Snapshot error:", err);
     res.status(500).json({ error: "Snapshot failed" });
   }
@@ -202,17 +223,51 @@ router.post("/:roomId/snapshot/restore", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Only the leader can restore snapshots" });
     }
 
-    const snapshot = await getSnapshotContent(key);
+    let snapshot = await getSnapshotContent(key);
+    
+    if (typeof snapshot === 'string') {
+      snapshot = JSON.parse(snapshot);
+    }
+    const restoredFiles = snapshot.files || snapshot;
 
-    await Project.updateOne(
-      { roomId: req.params.roomId },
-      { files: snapshot.files, updatedAt: Date.now() }
-    );
+    console.log("RESTORED FILES TYPE:", typeof restoredFiles);
+    console.log("RESTORED FILES IS ARRAY:", Array.isArray(restoredFiles));
 
-    res.json({ message: "Snapshot restored successfully", files: snapshot.files });
+    project.files = restoredFiles;
+    project.updatedAt = Date.now();
+    console.log("S3 FILE OBJECT:", restoredFiles[0]);
+    await project.save();
+
+    res.json({
+      message: "Snapshot restored successfully",
+      files: restoredFiles,
+    });
   } catch (err) {
     console.error("Restore error:", err);
     res.status(500).json({ error: "Restore failed" });
+  }
+});
+
+// ==================== DELETE SNAPSHOT ====================
+router.post("/:roomId/snapshot/delete", verifyToken, async (req, res) => {
+  try {
+    const { key } = req.body;
+    const { roomId } = req.params;
+    
+    const project = await Project.findOne({ roomId });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    if (project.creator !== req.user.username) {
+      return res.status(403).json({ error: "Only leader can delete snapshots" });
+    }
+
+    // FIX: Using your existing, working S3 delete function
+    await deleteFromS3(key);
+
+    res.json({ message: "Snapshot deleted successfully" });
+  } catch (error) {
+    console.error("Delete snapshot error:", error);
+    res.status(500).json({ error: "Server error deleting snapshot" });
   }
 });
 

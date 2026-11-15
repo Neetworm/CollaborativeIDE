@@ -8,31 +8,28 @@ const userSchema = new mongoose.Schema({
     trim: true, 
     minlength: 2 
   },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    trim: true, 
-    lowercase: true 
-  },
+  // EMAIL FIELD IS DEAD AND GONE
   password: { 
     type: String, 
     minlength: 6,
-    default: null  // NULL for OAuth users (no password)
+    default: null
   },
-  
-  // GitHub OAuth fields
   githubId: { type: String, default: null },
   githubUsername: { type: String, default: null },
   githubAvatar: { type: String, default: null },
-  
-  // Account type flags
   authProvider: { 
     type: String, 
     enum: ["local", "github", "both"], 
     default: "local" 
   },
-  
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  recoveryKey: {
+    type: String,
+    default: null
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

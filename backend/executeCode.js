@@ -1,74 +1,65 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import path from "path";
-import os from "os";
+import axios from "axios";
 
-function cleanup(dir) {
-  try { fs.rmSync(dir, { recursive:true, force:true }); } catch(e) {}
-}
+// Piston API version mapping
+const PISTON_MAP = {
+  javascript: { language: "javascript", version: "18.15.0" },
+  python: { language: "python", version: "3.10.0" },
+  cpp: { language: "c++", version: "10.2.0" },
+  java: { language: "java", version: "15.0.2" },
+};
 
-export function executeCode(code, language, { onStdout, onStderr, onExit, onError }) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codecollab-"));
+// Change parameter from 'code' to 'files'
+export async function executeCode(files, language, stdin, { onStdout, onStderr, onExit, onError }) {
+  const langKey = language.toLowerCase() === "c++" ? "cpp" : language.toLowerCase();
+  const config = PISTON_MAP[langKey];
 
-  try {
-    switch (language) {
-      case "javascript": case "JavaScript": {
-        const fp = path.join(tmpDir, "main.js");
-        fs.writeFileSync(fp, code);
-        const child = spawn("node", [fp], { timeout:30000, cwd:tmpDir });
-        wire(child, tmpDir, onStdout, onStderr, onExit, onError);
-        return child;
-      }
-      case "python": case "Python": {
-        const fp = path.join(tmpDir, "main.py");
-        fs.writeFileSync(fp, code);
-        // Try python3 first, fall back to python
-        const cmd = process.platform === "win32" ? "python" : "python3";
-        const child = spawn(cmd, [fp], { timeout:30000, cwd:tmpDir });
-        wire(child, tmpDir, onStdout, onStderr, onExit, onError);
-        return child;
-      }
-      case "cpp": case "C++": {
-        const src = path.join(tmpDir, "main.cpp");
-        const out = path.join(tmpDir, "main");
-        fs.writeFileSync(src, code);
-        const compile = spawn("g++", [src, "-o", out], { timeout:30000, cwd:tmpDir });
-        compile.stderr.on("data", onStderr);
-        compile.on("error", (e) => { onError(e); cleanup(tmpDir); });
-        compile.on("close", (c) => {
-          if (c !== 0) { onExit(c); cleanup(tmpDir); return; }
-          const run = spawn(out, [], { timeout:30000, cwd:tmpDir });
-          wire(run, tmpDir, onStdout, onStderr, onExit, onError);
-        });
-        return compile;
-      }
-      case "java": case "Java": {
-        const fp = path.join(tmpDir, "Main.java");
-        fs.writeFileSync(fp, code);
-        const compile = spawn("javac", [fp], { timeout:30000, cwd:tmpDir });
-        compile.stderr.on("data", onStderr);
-        compile.on("error", (e) => { onError(e); cleanup(tmpDir); });
-        compile.on("close", (c) => {
-          if (c !== 0) { onExit(c); cleanup(tmpDir); return; }
-          const run = spawn("java", ["-cp", tmpDir, "Main"], { timeout:30000, cwd:tmpDir });
-          wire(run, tmpDir, onStdout, onStderr, onExit, onError);
-        });
-        return compile;
-      }
-      default:
-        onStderr(Buffer.from(`Unsupported language: ${language}`));
-        onExit(1); cleanup(tmpDir);
-        return null;
-    }
-  } catch (err) {
-    onError(err); cleanup(tmpDir);
+  if (!config) {
+    onStderr(Buffer.from(`Unsupported language: ${language}\n`));
+    onExit(1);
     return null;
   }
-}
 
-function wire(child, tmpDir, onStdout, onStderr, onExit, onError) {
-  child.stdout.on("data", onStdout);
-  child.stderr.on("data", onStderr);
-  child.on("close", (c) => { onExit(c); cleanup(tmpDir); });
-  child.on("error", (e) => { onError(e); cleanup(tmpDir); });
+  onStdout(Buffer.from(`🚀 Sending ${language} to secure execution engine...\n`));
+
+  try {
+    const response = await axios.post("https://api.onlinecompiler.io/api/v2/piston/execute", {
+      language: config.language,
+      version: config.version,
+      files: files, // Pass the entire array directly here!
+      stdin: stdin || "",
+      compile_timeout: 10000,
+      run_timeout: 15000,
+    }, {
+      headers: {
+        Authorization: process.env.PISTON_API_KEY
+      }
+    });
+    
+
+    const result = response.data;
+
+    // Handle compilation errors (C++ / Java)
+    if (result.compile && result.compile.code !== 0) {
+      onStderr(Buffer.from(result.compile.stderr || result.compile.output));
+      onExit(result.compile.code);
+      return null;
+    }
+
+    // Output results
+    if (result.run.stdout) onStdout(Buffer.from(result.run.stdout));
+    if (result.run.stderr) onStderr(Buffer.from(result.run.stderr));
+
+    // Handle timeouts or memory limits
+    if (result.run.signal === "SIGKILL") {
+      onStderr(Buffer.from("\n⏰ Execution timed out or exceeded memory limits.\n"));
+    }
+
+    onExit(result.run.code || 0);
+
+  } catch (err) {
+    onError(err);
+    onExit(1);
+  }
+
+  return { kill: () => {} }; // Dummy kill function to prevent frontend disconnect crashes
 }

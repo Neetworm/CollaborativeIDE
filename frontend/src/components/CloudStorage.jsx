@@ -19,18 +19,28 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 
   const fetchUploads = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/uploads`, { headers });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/uploads`,
+        { headers },
+      );
       const data = await res.json();
       setUploads(data.uploads || []);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchSnapshots = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/snapshots`, { headers });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/snapshots`,
+        { headers },
+      );
       const data = await res.json();
       setSnapshots(data.snapshots || []);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleUpload = async (e) => {
@@ -44,11 +54,14 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/upload`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
       const data = await res.json();
       if (res.ok) {
         setMessage(`✅ ${file.name} uploaded!`);
@@ -66,7 +79,10 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 
   const handleDownload = async (uploadId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/download/${uploadId}`, { headers });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/download/${uploadId}`,
+        { headers },
+      );
       const data = await res.json();
       if (data.url) {
         window.open(data.url, "_blank");
@@ -79,9 +95,13 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   const handleDelete = async (uploadId) => {
     if (!window.confirm("Delete this file?")) return;
     try {
-      await fetch(`http://localhost:5000/api/storage/${roomId}/upload/${uploadId}`, {
-        method: "DELETE", headers,
-      });
+      await fetch(
+        `http://localhost:5000/api/storage/${roomId}/upload/${uploadId}`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
       fetchUploads();
       setMessage("🗑️ File deleted");
     } catch (err) {
@@ -90,15 +110,22 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   };
 
   const handleExport = () => {
-    window.open(`http://localhost:5000/api/storage/${roomId}/export?token=${token}`, "_blank");
+    window.open(
+      `http://localhost:5000/api/storage/${roomId}/export?token=${token}`,
+      "_blank",
+    );
   };
 
   const handleSaveSnapshot = async () => {
     setMessage("");
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/snapshot`, {
-        method: "POST", headers,
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/snapshot`,
+        {
+          method: "POST",
+          headers,
+        },
+      );
       const data = await res.json();
       if (res.ok) {
         setMessage(`✅ ${data.message}`);
@@ -112,22 +139,51 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   };
 
   const handleRestoreSnapshot = async (key) => {
-    if (!window.confirm("Restore this snapshot? Current code will be overwritten.")) return;
+    if (
+      !window.confirm(
+        "Restore this snapshot? Current code will be overwritten for everyone.",
+      )
+    )
+      return;
     try {
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/snapshot/restore`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/storage/${roomId}/snapshot/restore`,
+        {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ key }),
+        },
+      );
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Snapshot restored! Reload the room.");
+        setMessage("✅ Snapshot restored!"); // Removed the 'Reload the room' text
         if (onRestore) onRestore(data.files);
       } else {
         setMessage(`❌ ${data.error}`);
       }
     } catch (err) {
       setMessage("❌ Restore failed");
+    }
+  };
+
+  // Delete Snapshot Function
+  const handleDeleteSnapshot = async (key) => {
+    if (!window.confirm("Delete this snapshot permanently?")) return;
+    try {
+      // FIX: Changed to POST so we can safely send S3 keys with slashes in the body
+      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/snapshot/delete`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      if (res.ok) {
+        setMessage("✅ Snapshot deleted");
+        fetchSnapshots(); // Refresh the list
+      } else {
+        setMessage("❌ Delete failed");
+      }
+    } catch (err) {
+      setMessage("❌ Delete failed");
     }
   };
 
@@ -139,7 +195,10 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleString("en-IN", {
-      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -147,22 +206,57 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
     <div style={st.container}>
       <div style={st.header}>
         <span style={st.title}>☁️ Cloud Storage</span>
-        <button onClick={handleExport} style={st.exportBtn} title="Download project as ZIP">📥 Export</button>
+        <button
+          onClick={handleExport}
+          style={st.exportBtn}
+          title="Download project as ZIP"
+        >
+          📥 Export
+        </button>
       </div>
 
       {/* Tabs */}
       <div style={st.tabs}>
-        <button onClick={() => setActiveTab("uploads")} style={{ ...st.tab, borderBottom: activeTab === "uploads" ? "2px solid #38bdf8" : "2px solid transparent", color: activeTab === "uploads" ? "#38bdf8" : "#94a3b8" }}>
+        <button
+          onClick={() => setActiveTab("uploads")}
+          style={{
+            ...st.tab,
+            borderBottom:
+              activeTab === "uploads"
+                ? "2px solid #38bdf8"
+                : "2px solid transparent",
+            color: activeTab === "uploads" ? "#38bdf8" : "#94a3b8",
+          }}
+        >
           📁 Files ({uploads.length})
         </button>
-        <button onClick={() => setActiveTab("snapshots")} style={{ ...st.tab, borderBottom: activeTab === "snapshots" ? "2px solid #38bdf8" : "2px solid transparent", color: activeTab === "snapshots" ? "#38bdf8" : "#94a3b8" }}>
+        <button
+          onClick={() => setActiveTab("snapshots")}
+          style={{
+            ...st.tab,
+            borderBottom:
+              activeTab === "snapshots"
+                ? "2px solid #38bdf8"
+                : "2px solid transparent",
+            color: activeTab === "snapshots" ? "#38bdf8" : "#94a3b8",
+          }}
+        >
           📸 Snapshots ({snapshots.length})
         </button>
       </div>
 
       {/* Message */}
       {message && (
-        <div style={{ fontSize: "11px", padding: "4px 8px", borderRadius: "4px", marginBottom: "6px", background: message.includes("✅") ? "#22c55e22" : "#ef444422", color: message.includes("✅") ? "#22c55e" : "#ef4444" }}>
+        <div
+          style={{
+            fontSize: "11px",
+            padding: "4px 8px",
+            borderRadius: "4px",
+            marginBottom: "6px",
+            background: message.includes("✅") ? "#22c55e22" : "#ef444422",
+            color: message.includes("✅") ? "#22c55e" : "#ef4444",
+          }}
+        >
           {message}
         </div>
       )}
@@ -171,8 +265,17 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
       {activeTab === "uploads" && (
         <div>
           {/* Upload button */}
-          <input type="file" ref={fileInputRef} onChange={handleUpload} style={{ display: "none" }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ ...st.uploadBtn, opacity: uploading ? 0.6 : 1 }}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleUpload}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{ ...st.uploadBtn, opacity: uploading ? 0.6 : 1 }}
+          >
             {uploading ? "⏳ Uploading..." : "📤 Upload File"}
           </button>
 
@@ -186,12 +289,25 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
                   <div style={st.fileInfo}>
                     <span style={st.fileName}>{f.originalName}</span>
                     <span style={st.fileMeta}>
-                      {formatSize(f.size)} • {f.uploadedBy} • {formatDate(f.createdAt)}
+                      {formatSize(f.size)} • {f.uploadedBy} •{" "}
+                      {formatDate(f.createdAt)}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: "3px" }}>
-                    <button onClick={() => handleDownload(f._id)} style={st.iconBtn} title="Download">📥</button>
-                    <button onClick={() => handleDelete(f._id)} style={st.iconBtn} title="Delete">🗑️</button>
+                    <button
+                      onClick={() => handleDownload(f._id)}
+                      style={st.iconBtn}
+                      title="Download"
+                    >
+                      📥
+                    </button>
+                    <button
+                      onClick={() => handleDelete(f._id)}
+                      style={st.iconBtn}
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               ))
@@ -204,28 +320,79 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
       {activeTab === "snapshots" && (
         <div>
           {isLeader && (
-            <button onClick={handleSaveSnapshot} style={st.uploadBtn}>📸 Save Snapshot</button>
+            <button onClick={handleSaveSnapshot} style={st.uploadBtn}>
+              📸 Save Snapshot
+            </button>
           )}
           <div style={st.list}>
             {snapshots.length === 0 ? (
-              <p style={st.empty}>No snapshots yet{isLeader ? ". Click above to save one." : "."}</p>
+              <p style={st.empty}>
+                No snapshots yet{isLeader ? ". Click above to save one." : "."}
+              </p>
             ) : (
-              snapshots.map((snap, i) => {
-                const name = snap.key.split("/").pop();
-                const vMatch = name.match(/v(\d+)/);
-                const version = vMatch ? vMatch[1] : i + 1;
-                return (
-                  <div key={snap.key} style={st.fileItem}>
-                    <div style={st.fileInfo}>
-                      <span style={st.fileName}>Version {version}</span>
-                      <span style={st.fileMeta}>{formatDate(snap.lastModified)}</span>
-                    </div>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  maxHeight: "150px",
+                  overflowY: "auto",
+                }}
+              >
+                {snapshots.map((snap) => (
+                  <li
+                    key={snap.key}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "6px",
+                      borderBottom: "1px solid #334155",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", color: "#e2e8f0" }}>
+                      {new Date(
+                        snap.timestamp ?? snap.lastModified,
+                      ).toLocaleString()}
+                    </span>
+
                     {isLeader && (
-                      <button onClick={() => handleRestoreSnapshot(snap.key)} style={{ ...st.iconBtn, fontSize: "11px" }} title="Restore">♻️</button>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <button
+                          onClick={() => handleRestoreSnapshot(snap.key)}
+                          style={{
+                            background: "#0ea5e9",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "2px 8px",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                          }}
+                        >
+                          Restore
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteSnapshot(snap.key)}
+                          style={{
+                            background: "#ef4444",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "2px 8px",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                          }}
+                          title="Delete snapshot"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     )}
-                  </div>
-                );
-              })
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>
@@ -235,20 +402,97 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 }
 
 const st = {
-  container: { marginTop: "10px", borderTop: "1px solid #334155", paddingTop: "8px" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" },
+  container: {
+    marginTop: "10px",
+    borderTop: "1px solid #334155",
+    paddingTop: "8px",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "6px",
+  },
   title: { fontSize: "13px", fontWeight: "bold", color: "#94a3b8" },
-  exportBtn: { background: "#334155", color: "white", border: "none", borderRadius: "4px", padding: "3px 8px", cursor: "pointer", fontSize: "11px", fontWeight: "bold" },
-  tabs: { display: "flex", borderBottom: "1px solid #334155", marginBottom: "8px" },
-  tab: { flex: 1, background: "transparent", border: "none", padding: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "bold" },
-  uploadBtn: { width: "100%", padding: "6px", background: "#334155", color: "white", border: "1px dashed #64748b", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "bold", marginBottom: "6px" },
-  list: { maxHeight: "120px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "3px" },
-  empty: { color: "#64748b", fontSize: "11px", textAlign: "center", padding: "10px 0" },
-  fileItem: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0f172a", padding: "5px 8px", borderRadius: "4px" },
-  fileInfo: { display: "flex", flexDirection: "column", gap: "1px", flex: 1, minWidth: 0 },
-  fileName: { fontSize: "11px", color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  exportBtn: {
+    background: "#334155",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "3px 8px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "bold",
+  },
+  tabs: {
+    display: "flex",
+    borderBottom: "1px solid #334155",
+    marginBottom: "8px",
+  },
+  tab: {
+    flex: 1,
+    background: "transparent",
+    border: "none",
+    padding: "6px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "bold",
+  },
+  uploadBtn: {
+    width: "100%",
+    padding: "6px",
+    background: "#334155",
+    color: "white",
+    border: "1px dashed #64748b",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "bold",
+    marginBottom: "6px",
+  },
+  list: {
+    maxHeight: "120px",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "3px",
+  },
+  empty: {
+    color: "#64748b",
+    fontSize: "11px",
+    textAlign: "center",
+    padding: "10px 0",
+  },
+  fileItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    background: "#0f172a",
+    padding: "5px 8px",
+    borderRadius: "4px",
+  },
+  fileInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "1px",
+    flex: 1,
+    minWidth: 0,
+  },
+  fileName: {
+    fontSize: "11px",
+    color: "white",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
   fileMeta: { fontSize: "9px", color: "#64748b" },
-  iconBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: "13px", padding: "2px" },
+  iconBtn: {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "13px",
+    padding: "2px",
+  },
 };
 
 export default CloudStorage;
