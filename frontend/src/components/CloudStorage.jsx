@@ -20,7 +20,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   const fetchUploads = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/uploads`,
+        `${API_BASE_URL}/api/storage/${roomId}/uploads`,
         { headers },
       );
       const data = await res.json();
@@ -33,7 +33,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   const fetchSnapshots = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/snapshots`,
+        `${API_BASE_URL}/api/storage/${roomId}/snapshots`,
         { headers },
       );
       const data = await res.json();
@@ -55,7 +55,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/upload`,
+        `${API_BASE_URL}/api/storage/${roomId}/upload`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -80,7 +80,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
   const handleDownload = async (uploadId) => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/download/${uploadId}`,
+        `${API_BASE_URL}/api/storage/${roomId}/download/${uploadId}`,
         { headers },
       );
       const data = await res.json();
@@ -96,7 +96,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
     if (!window.confirm("Delete this file?")) return;
     try {
       await fetch(
-        `http://localhost:5000/api/storage/${roomId}/upload/${uploadId}`,
+        `${API_BASE_URL}/api/storage/${roomId}/upload/${uploadId}`,
         {
           method: "DELETE",
           headers,
@@ -111,7 +111,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
 
   const handleExport = () => {
     window.open(
-      `http://localhost:5000/api/storage/${roomId}/export?token=${token}`,
+      `${API_BASE_URL}/api/storage/${roomId}/export?token=${token}`,
       "_blank",
     );
   };
@@ -120,7 +120,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
     setMessage("");
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/snapshot`,
+        `${API_BASE_URL}/api/storage/${roomId}/snapshot`,
         {
           method: "POST",
           headers,
@@ -147,7 +147,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
       return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/storage/${roomId}/snapshot/restore`,
+        `${API_BASE_URL}/api/storage/${roomId}/snapshot/restore`,
         {
           method: "POST",
           headers: { ...headers, "Content-Type": "application/json" },
@@ -156,7 +156,7 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
       );
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Snapshot restored!"); // Removed the 'Reload the room' text
+        setMessage("✅ Snapshot restored!"); 
         if (onRestore) onRestore(data.files);
       } else {
         setMessage(`❌ ${data.error}`);
@@ -166,19 +166,17 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
     }
   };
 
-  // Delete Snapshot Function
   const handleDeleteSnapshot = async (key) => {
     if (!window.confirm("Delete this snapshot permanently?")) return;
     try {
-      // FIX: Changed to POST so we can safely send S3 keys with slashes in the body
-      const res = await fetch(`http://localhost:5000/api/storage/${roomId}/snapshot/delete`, {
+      const res = await fetch(`${API_BASE_URL}/api/storage/${roomId}/snapshot/delete`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
       if (res.ok) {
         setMessage("✅ Snapshot deleted");
-        fetchSnapshots(); // Refresh the list
+        fetchSnapshots(); 
       } else {
         setMessage("❌ Delete failed");
       }
@@ -215,7 +213,6 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
         </button>
       </div>
 
-      {/* Tabs */}
       <div style={st.tabs}>
         <button
           onClick={() => setActiveTab("uploads")}
@@ -245,7 +242,6 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
         </button>
       </div>
 
-      {/* Message */}
       {message && (
         <div
           style={{
@@ -261,10 +257,8 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
         </div>
       )}
 
-      {/* Uploads Tab */}
       {activeTab === "uploads" && (
         <div>
-          {/* Upload button */}
           <input
             type="file"
             ref={fileInputRef}
@@ -279,7 +273,6 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
             {uploading ? "⏳ Uploading..." : "📤 Upload File"}
           </button>
 
-          {/* File list */}
           <div style={st.list}>
             {uploads.length === 0 ? (
               <p style={st.empty}>No files uploaded yet</p>
@@ -316,7 +309,6 @@ function CloudStorage({ roomId, isLeader, onRestore }) {
         </div>
       )}
 
-      {/* Snapshots Tab */}
       {activeTab === "snapshots" && (
         <div>
           {isLeader && (
