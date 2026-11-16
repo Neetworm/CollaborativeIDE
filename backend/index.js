@@ -17,7 +17,20 @@ import {
 import { executeCode } from "./executeCode.js";
 
 const app = express();
-app.use(cors()); 
+
+const corsOptions = {
+  origin: [
+    "http://localhost:5173",
+    "https://collaborative-ide-six.vercel.app",
+    process.env.CLIENT_URL
+  ].filter(Boolean),
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json()); 
 app.use("/api/auth", authRoutes); 
 app.use("/api/storage", storageRoutes); 
