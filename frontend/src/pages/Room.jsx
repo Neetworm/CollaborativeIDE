@@ -134,9 +134,9 @@ function Room() {
     const socket = io(API_BASE_URL, {
       autoConnect: false,
       auth: { token },
-      transports: ["websocket", "polling"], // Allow Vercel to fallback to polling if WSS fails
-      timeout: 60000, // Give Render 60 seconds to wake up from sleep
-      reconnectionAttempts: 10, // Keep trying to connect
+      transports: ["websocket", "polling"], 
+      timeout: 60000, 
+      reconnectionAttempts: 10, 
     });
     socketRef.current = socket;
 
@@ -1038,6 +1038,67 @@ function Room() {
             </div>
           </div>
         </div>
+
+        {/* GLOBAL SEARCH MODAL */}
+        {showSearchModal && (
+          <div style={st.modalOverlay} onClick={() => setShowSearchModal(false)}>
+            <div style={st.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <h3 style={{ margin: 0, color: "#0ea5e9" }}>🔍 Global Search</h3>
+                <button onClick={() => setShowSearchModal(false)} style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              </div>
+              <input type="text" autoFocus value={searchQuery} onChange={(e) => handleGlobalSearch(e.target.value)} placeholder="Search across all files..." style={st.searchInput} />
+              <div style={{ flex: 1, overflowY: "auto", borderTop: "1px solid #334155", paddingTop: "10px" }}>
+                {searchQuery && searchResults.length === 0 ? (
+                  <div style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}>No results found.</div>
+                ) : (
+                  searchResults.map((res, i) => (
+                    <div key={i} onClick={() => jumpToFile(res.fileId)} style={st.searchResultItem}>
+                      <div style={{ fontSize: "12px", color: "#38bdf8", marginBottom: "4px", fontWeight: "bold" }}>
+                        📄 {res.fileName} <span style={{ color: "#94a3b8", fontWeight: "normal" }}>(Line {res.lineNum})</span>
+                      </div>
+                      <div style={{ fontSize: "13px", color: "#e2e8f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {res.text}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS MODAL */}
+        {showSettings && (
+          <div style={st.modalOverlay} onClick={() => setShowSettings(false)}>
+            <div style={st.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ margin: 0, color: "#38bdf8" }}>⚙️ Editor Settings</h3>
+                <button onClick={() => setShowSettings(false)} style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              </div>
+              <div style={{ marginBottom: "15px" }}>
+                <label style={{ display: "block", fontSize: "13px", marginBottom: "5px", color: "#94a3b8" }}>
+                  Font Size ({editorSettings.fontSize}px)
+                </label>
+                <input type="range" min="10" max="24" value={editorSettings.fontSize} onChange={(e) => setEditorSettings({ ...editorSettings, fontSize: Number(e.target.value) })} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "15px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editorSettings.minimap} onChange={(e) => setEditorSettings({ ...editorSettings, minimap: e.target.checked })} />
+                  Show Minimap
+                </label>
+              </div>
+              <div style={{ marginBottom: "25px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editorSettings.wordWrap === "on"} onChange={(e) => setEditorSettings({ ...editorSettings, wordWrap: e.target.checked ? "on" : "off" })} />
+                  Word Wrap
+                </label>
+              </div>
+              <button onClick={() => setShowSettings(false)} style={st.primaryBtn}>Done</button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
